@@ -1,4 +1,5 @@
 # totally-real-news-bot
+Update 6/7/24 - I need to rewrite this, check code annotations for more info.<br>
 Generates AI text/images/video based on a NYT news headline, can be modified to create other content.
 
 Update - 16/6/24 - Project uses a standalone version of AllTalk TTS v2 BETA, it works pretty much the same as the TWGUI extension but has its own install location, read more here:<br>
