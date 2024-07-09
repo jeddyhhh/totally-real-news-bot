@@ -442,7 +442,7 @@ while True:
         select_article = randrange(get_article_count(cata_number))
     
     if random_article_select == False and random_cata_mode == False:
-        if cata_number > 21:
+        if cata_number > 20:
             cata_number = 1
             article_count = get_article_count(cata_number)
             if select_article > article_count:
