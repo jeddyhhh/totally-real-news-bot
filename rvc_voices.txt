@@ -1,5 +1,1 @@
-daria/daria1.pth
-JimmyNeutron/JimmyNeutron.pth
-MadisonAllworth/model.pth
-PatrickStar/PatrickStar.pth
-peter/PeterGriffin.pth
+
