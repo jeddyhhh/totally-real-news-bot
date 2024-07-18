@@ -1,4 +1,4 @@
-## totally real newsbot V2- by jeddyh ##
+## totally real newsbot V2 - by jeddyh ##
 import json
 import base64
 import requests
@@ -28,7 +28,7 @@ enable_anchor_overlay = False
 
 ## RVC Config ##
 rvc_enabled = True ## If false, it will just use the raw piper/coqui etc wav output
-default_rvc_voice = 'MadisonAllworth/model.pth' ## models are in alltalk/models/rvc_voices/*folder*/*model*.pth
+default_rvc_voice = 'peter/PeterGriffin.pth' ## models are in alltalk/models/rvc_voices/*folder*/*model*.pth
 random_rvc_voice = False ## models must be in the rvc_voices.txt file in the root with the format '*folder*/*model*.pth' eg; peter/PeterGriffin.pth
 
 ## NYT Article Selection Config ##
@@ -47,7 +47,7 @@ video_width = "400"
 watermark_mode = True ## logo_overlay.png in the root can be replaced with your watermark.
 
 ## API Details ##
-nyt_apikey = "" ## Insert your API key here
+nyt_apikey = ""
 
 ooba_url = "http://127.0.0.1:5000/v1/completions"
 ooba_headers = {"Content-Type": "application/json"}
@@ -209,7 +209,7 @@ def analyze_headline(headline):
         return headline_tone.strip()
     
 def generate_article_hashtags(headline, article_desc):
-    prompt = f"Create 5 hashtags based on {headline} - {article_desc}, do not include anymore than 5 hashtags. Only include the answer.\nASSISTANT:"
+    prompt = f"USER: Create 5 hashtags based on {headline} - {article_desc}, do not include anymore than 5 hashtags. Only include the answer.\nASSISTANT:"
 
     request = {
         'prompt': prompt,
@@ -234,13 +234,13 @@ def generate_text(headline, article_desc):
     tone = get_random_line_from_txt("./emotions.txt")
     perspective = get_random_line_from_txt("./descriptive.txt")
     
-    prompt = (f"Write a news segment in a {tone} tone about {headline} : {article_desc}, "
-              f"strictly between 300 and 400 words, written from the perspective of a {perspective} person, "
-              "Only include your answer, no other words. Do not include a title.")
+    prompt = (f"User: Write a news article in a {tone} tone about {headline} : {article_desc}, "
+              f"strictly between 500 and 600 words, written from the perspective of a {perspective} person, "
+              "Only include your answer, no other words. Do not include a title. Do not explain what you are doing, just the news article text.\nASSISTANT:")
     
     request = {
         'prompt': prompt,
-        'max_tokens': 350,
+        'max_tokens': 600,
         'do_sample': True,
         'temperature': 1.1,
         'top_p': 0.1,
@@ -483,6 +483,8 @@ while True:
         print(f'\n{bcolors.OKCYAN}Generating article hashtags...{bcolors.ENDC}')
         genHashtags_tic = time.perf_counter()
         article_hashtags = generate_article_hashtags(nyt_headline, nyt_article_desc)
+        article_hashtags = re.findall(r'(?i)\#\w+', article_hashtags)
+        article_hashtags = ' '.join(article_hashtags)
         genHashtags_toc = time.perf_counter()
         print(f'{bcolors.OKGREEN}Hashtags generated - {article_hashtags.partition('\n')[0]} - Time taken: {genHashtags_toc - genHashtags_tic:0.4f} seconds.{bcolors.ENDC}')
 
