@@ -1,4 +1,4 @@
-## totally real newsbot V2 - by jeddyh ##
+## totally real newsbot v3 - by jeddyh ##
 import json
 import base64
 import requests
@@ -18,10 +18,11 @@ from subprocess import Popen
 
 ## Config ##
 facebook_post_enable = True 
-combineVideos = True
+combineVideos = False
 num_of_vids_to_combine = 3
 generate_hashtags = True
 checkForDuplicates = True
+postFacebookComment = True
 
 ## sadtalker Config - sadtalker is optional, its slow and will blow out video generation times by 4x. Works pretty well tho. ##
 enable_anchor_overlay = False
@@ -32,17 +33,17 @@ default_rvc_voice = 'peter/PeterGriffin.pth' ## models are in alltalk/models/rvc
 random_rvc_voice = False ## models must be in the rvc_voices.txt file in the root with the format '*folder*/*model*.pth' eg; peter/PeterGriffin.pth
 
 ## NYT Article Selection Config ##
-cata_number = 0 ## Starts from 'arts' then 'automobiles' etc etc until it hits the end of the list and starts again.
+cata_number = 1 ## Starts from 'arts' then 'automobiles' etc etc until it hits the end of the list and starts again.
 select_article = 1 ## Each catagory has an n number of articles associated with it, this selects the first one and moves to the second one once it goes through all the catagories. 
 random_cata_mode = True ## Picks a random topic for each generation. Ignores cata_number.
 random_article_select = False ## Looks up how many articles are associated with the catagory and picks a random one. Could be a new or old article. Ignores select_article.
 
 ## Image and Video Config ##
-image_height = "400"
-image_width = "400"
+image_height = "512"
+image_width = "512"
 
-video_height = "400"
-video_width = "400"
+video_height = "512"
+video_width = "512"
 
 watermark_mode = True ## logo_overlay.png in the root can be replaced with your watermark.
 
@@ -61,7 +62,7 @@ sadtalker_url = "http://127.0.0.1:8850/generate/"
 sadtalker_headers = {"Content-Type": "application/json"}
 
 ## Social API Details ##
-your_facebook_page_id = 0
+your_facebook_page_id = 0 ##No quote marks, just your facebook page id number##
 your_facebook_page_access_token = ''
 
 ## Program Control Options - Windows only atm. ##
@@ -71,7 +72,7 @@ control_alltalk_process = True
 control_sadtalker_process = True
 
 ooba_full_path = r"C:\\AI\\text-generation-webui-main\\start_windows.bat"
-sd_full_path = r"C:\\AI\\automatic1111\\run.bat"
+sd_full_path = r"C:\\AI\\forge\\run.bat"
 alltalk_full_path = r"C:\\AI\\alltalk\\alltalk_tts\\start_alltalk.bat"
 sadtalker_full_path = r"C:\\AI\\sadtalker-api\\run_sadtalker.bat"
 
@@ -89,7 +90,9 @@ gen_info_array = []
 tts_output_file_path = ''
 sadtalker_image_path = ''
 sadtalker_video_path = ''
+iwords = ''
 current_working_dir = os.getcwd()
+video_id = ''
 
 class bcolors:
     HEADER = '\033[95m'
@@ -112,6 +115,9 @@ CATEGORIES = [
 def get_category_name(cata_number):
     return CATEGORIES[cata_number % len(CATEGORIES)]
 
+## Controls for stopping and starting various AI backends, saves VRAM by only loading 1 model (llama/sd/piper etc) at a time, I've only got 6gb of VRAM to play with so ##
+## this is nessessary, you can change the preferences above (Program Control Options) to keep all of this loaded at the same time, it would lower generation times ##
+## For Windows only atm ##
 def startOoba():
     subprocess.Popen(f'start \"\"ooba_window_title\"\" {ooba_full_path}', shell=True)
 
@@ -229,18 +235,40 @@ def generate_article_hashtags(headline, article_desc):
     response = requests.post(ooba_url, headers=ooba_headers, json=request)
     if response.status_code == 200:
         return response.json()['choices'][0]['text'].strip()
+    
+def important_words(headline, article_desc):
+    prompt = f"USER: Give me the 10 most important words in the following text: {headline} - {article_desc}, do not include anymore than 10 words, if there is any names of real people or places, include those. Only include your answer.\nASSISTANT:"
+
+    request = {
+        'prompt': prompt,
+        'max_tokens': 120,
+        'do_sample': True,
+        'temperature': 1.1,
+        'top_p': 0.1,
+        'typical_p': 1,
+        'repetition_penalty': 1.18,
+        'top_k': 65,
+        'min_length': 16,
+        'num_beams': 1,
+        'add_bos_token': True,
+        'truncation_length': 2048
+    }
+
+    response = requests.post(ooba_url, headers=ooba_headers, json=request)
+    if response.status_code == 200:
+        return response.json()['choices'][0]['text'].strip()
 
 def generate_text(headline, article_desc):
     tone = get_random_line_from_txt("./emotions.txt")
     perspective = get_random_line_from_txt("./descriptive.txt")
     
-    prompt = (f"User: Write a news article in a {tone} tone about {headline} : {article_desc}, "
-              f"strictly between 500 and 600 words, written from the perspective of a {perspective} person, "
-              "Only include your answer, no other words. Do not include a title. Do not explain what you are doing, just the news article text.\nASSISTANT:")
+    prompt = (f"Write a news article in a {tone} tone about {headline} : {article_desc}, "
+              f"between 500 and 600 words with your personal opinion at the end to wrap up the segment, written from the perspective of a {perspective} person, "
+              "Only include your answer, no other words. Do not include a title. Do not explain what you are doing, just the news article text.\n")
     
     request = {
         'prompt': prompt,
-        'max_tokens': 600,
+        'max_tokens': 1528,
         'do_sample': True,
         'temperature': 1.1,
         'top_p': 0.1,
@@ -296,9 +324,10 @@ def save_encoded_image(b64_image, output_path):
 def submit_auto1111_post(url, data):
     return requests.post(url, data=json.dumps(data))
 
-def generate_image(headline, epoch_time, headline_tone, headline_topic, filename):
-    prompt = f"{headline} in a {headline_tone} tone in a {headline_topic} setting"
-    data = {'prompt': f'{prompt}, Wide-angle lens, realistic', 'steps': 20, 'width': f'{image_width}', 'height': f'{image_height}'}
+def generate_image(headline, epoch_time, headline_tone, headline_topic, filename, nyt_article_desc, i_words):
+    prompt = f"{i_words}"
+    negPrompt = "(worst quality, low quality:1.4), watermark, error, blurry, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, artist name, bad anatomy"
+    data = {'prompt': f'realistic, {prompt}', 'negative_prompt': f'{negPrompt}', 'cfg_scale': 9, 'steps': 20, 'width': f'{image_width}', 'height': f'{image_height}'}
     response = submit_auto1111_post(auto1111_url, data)
     
     if response.status_code == 200:
@@ -409,6 +438,28 @@ def upload_video_to_facebook(video_path, video_title, video_desc, article_hashta
     }
     
     response = requests.post(post_url, files=files, data=payload)
+
+    print(response.text)
+    video_id = json.loads(response.text)
+
+    print(video_id['id'])
+    return video_id['id']
+
+## atm it takes a random URL from a text file and posts it as a comment on the video that is being uploaded to Facebook, this data could be anything as long as it's ##
+## on it's own line ##
+def post_comment_on_video(video_id):
+    fb_access_token = your_facebook_page_access_token
+
+    random_url = random.choice(open("urls.txt").readlines())
+
+    post_url = f'https://graph-video.facebook.com/v20.0/{video_id}/comments'
+    payload = {
+        'access_token': fb_access_token,
+        'message': random_url
+    }
+
+    response = requests.post(post_url, data=payload)
+    print("Posting comment to video...")
     print(response.text)
 
 def combine_videos(epoch_time):
@@ -496,6 +547,16 @@ while True:
     genTextTimeTaken = genText_toc - genText_tic
     gen_info_array.append(f"Article text gen time: {genTextTimeTaken} seconds")
     print(f'{bcolors.OKGREEN}Article text generation complete. Time taken: {genTextTimeTaken:0.4f} seconds.{bcolors.ENDC}')
+
+    ##Generate important words for image creation
+    print(f'\n{bcolors.OKCYAN}Generating important words for image creation...{bcolors.ENDC}')
+    iwords_tic = time.perf_counter()
+    iwords = important_words(nyt_headline, nyt_article_desc)
+    print(iwords)
+    iwords_toc = time.perf_counter()
+    iwordsTimeTaken = iwords_toc - iwords_tic
+    gen_info_array.append(f"Article important words time: {iwordsTimeTaken} seconds")
+    print(f'{bcolors.OKGREEN}Article important words complete. Time taken: {iwordsTimeTaken:0.4f} seconds.{bcolors.ENDC}')
     if control_ooba_process == True:
         killOoba()
 
@@ -507,7 +568,7 @@ while True:
 
     print(f'\n{bcolors.OKCYAN}Generating text-to-speech...{bcolors.ENDC}')
     genTTS_tic = time.perf_counter()
-    tts_output_file_path = generate_tts(generated_text[:1999], file_name) ## Not sure if this limit is still needed now that I'm using a different TTS
+    tts_output_file_path = generate_tts(generated_text[:4999], file_name) ## Not sure if this limit is still needed now that I'm using a different TTS
     genTTS_toc = time.perf_counter()
     genTTSTimeTaken = genTTS_toc - genTTS_tic
     gen_info_array.append(f"TTS gen time: {genTTSTimeTaken} seconds")
@@ -526,9 +587,9 @@ while True:
     print(f'\n{bcolors.OKCYAN}Generating images...{bcolors.ENDC}')
     genImages_tic = time.perf_counter()
 
-    for image_count in range(1, 5):
+    for image_count in range(1, 12):
         image_filename = f'{file_name}_{image_count}'
-        generate_image(nyt_headline, epoch_time, headline_tone, headline_topic, image_filename)
+        generate_image(nyt_headline, epoch_time, headline_tone, headline_topic, image_filename, nyt_article_desc, iwords)
 
     ## Creates an image for sadtalker, trys to make a news anchor that is centered with a full face in frame ##
     if enable_anchor_overlay == True:
@@ -595,7 +656,10 @@ while True:
             if facebook_post_enable:
                 concat_filename = f'./combined/{epoch_time}.mp4'
                 print(f'\n{bcolors.OKCYAN}Posting to Facebook{bcolors.ENDC}')
-                upload_video_to_facebook(concat_filename, '', '', '', combined_title_desc, hashtag_array, cata_number)
+                video_id = upload_video_to_facebook(concat_filename, '', '', '', combined_title_desc, hashtag_array, cata_number)
+                time.sleep(30)
+                if postFacebookComment == True:
+                    post_comment_on_video(video_id) 
                 print(f'{bcolors.OKGREEN}Posting to Facebook complete.{bcolors.ENDC}')
                 combined_title_desc.clear()
                 hashtag_array.clear()
@@ -603,10 +667,16 @@ while True:
     else:
         if facebook_post_enable == True:
             if enable_anchor_overlay == True:
-                upload_video_to_facebook(f'./combined/{epoch_time}_videoWithAnchorFinal.mp4', nyt_headline, nyt_article_desc, article_hashtags, '', '', '')
+                video_id = upload_video_to_facebook(f'./combined/{epoch_time}_videoWithAnchorFinal.mp4', nyt_headline, nyt_article_desc, article_hashtags, '', '', '')
+                time.sleep(30)
+                if postFacebookComment == True:
+                    post_comment_on_video(video_id)             
                 print(f'\n{bcolors.OKCYAN}Posting to Facebook{bcolors.ENDC}')
             else:
-                upload_video_to_facebook(f'./videos/{file_name}_video.mp4', nyt_headline, nyt_article_desc, article_hashtags, '', '', '')
+                video_id = upload_video_to_facebook(f'./videos/{file_name}_video.mp4', nyt_headline, nyt_article_desc, article_hashtags, '', '', '')
+                time.sleep(30)
+                if postFacebookComment == True:
+                    post_comment_on_video(video_id) 
                 print(f'\n{bcolors.OKCYAN}Posting to Facebook{bcolors.ENDC}')
 
     ## Resetting variables/arrays for the next generation ##
@@ -620,11 +690,18 @@ while True:
     saveGenStats(f'\n\n{nyt_headline}\n{genInfo}')
     gen_info_array.clear()
     tts_output_file_path = ''
+    iwords = ''
+    video_id = ''
     writeCurrentHeadlinetoTxt(nyt_headline)
 
     if random_article_select == False and random_cata_mode == False:
         cata_number = cata_number + 1
-        select_article = select_article + 1
+        
+        article_count = get_article_count(cata_number)
+        if select_article > article_count:
+            select_article = 1
+        else:
+            select_article = select_article + 1
     
     print(f'\n{bcolors.OKGREEN}Video creation complete for {bcolors.ENDC}{bcolors.OKCYAN}{nyt_headline}{bcolors.ENDC}')
     print(f'{bcolors.OKGREEN}Time taken overall: {bcolors.ENDC}{bcolors.WARNING}{runtime} minutes.')
