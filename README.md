@@ -17,8 +17,8 @@ https://github.com/erew123/alltalk_tts/tree/alltalkbeta<br>
 Requires:<br>
 - Python 3<br>
 - A working install of text-generation-webui with the --api flag enabled<br>(https://github.com/oobabooga/text-generation-webui)<br>
-- A working AllTalk TTS v2 BETA installation with api access enabled.<br>(I'm using the standalone version but the TWGUI extension should work)<br>(https://github.com/erew123/alltalk_tts/tree/alltalkbeta)<br>
-- A working install of stable-diffusion-webui with  --api enabled in COMMANDLINE_ARGS<br>(https://github.com/AUTOMATIC1111/stable-diffusion-webui)<br>
+- A working AllTalk TTS v2 BETA installation with api access enabled.<br>(I'm using the standalone version)<br>(https://github.com/erew123/alltalk_tts/tree/alltalkbeta)<br>
+- A working install of stable-diffusion-webui (or forge) with  --api enabled in COMMANDLINE_ARGS<br>(https://github.com/AUTOMATIC1111/stable-diffusion-webui)<br>(https://github.com/lllyasviel/stable-diffusion-webui-forge)<br>
 - A New York Times API access key<br>(https://developer.nytimes.com/get-started)<br>
 - (optional) A working install of my fork of sadtalker-api (https://github.com/jeddyhhh/sadtalker-api)<br>
 - (optional) A Facebook page access token<br><br>
