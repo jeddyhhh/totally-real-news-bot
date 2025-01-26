@@ -1,10 +1,14 @@
 # totally-real-news-bot
 Here's some examples of output: https://www.facebook.com/profile.php?id=61560732713412&sk=videos
 
+Generates AI text/images/video based on a NYT news headline, can be modified to create other content.
+
+
+
 Update 26/1/25 - Added some stuff, see annotations in run_bot.py for more details
 
-Update 6/7/24 - I need to rewrite this, check code annotations for more info.<br><br>
-Generates AI text/images/video based on a NYT news headline, can be modified to create other content.
+Update 6/7/24 - I need to rewrite this, check code annotations for more info.
+
 
 Update - 16/6/24 - Project uses a standalone version of AllTalk TTS v2 BETA, it works pretty much the same as the TWGUI extension but has its own install location, read more here:<br>
 https://github.com/erew123/alltalk_tts/tree/alltalkbeta<br>
