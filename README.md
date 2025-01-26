@@ -1,4 +1,6 @@
 # totally-real-news-bot
+Update 26/1/25 - Added some stuff, see annotations in run_bot.py for more details
+
 Update 6/7/24 - I need to rewrite this, check code annotations for more info.<br><br>
 Generates AI text/images/video based on a NYT news headline, can be modified to create other content.
 
@@ -31,17 +33,19 @@ Basic process overview:<br>
 1. Bot grabs a NYT headline and short description<br>
 2. Bot uses text-generation-webui to analyse the headline for tone and stores it.<br>
 3. Bot trys to make up hashtags related to the headline and article summary<br>
-4. Bot generates a news article text based on the headline and short description, asks bot to write in a randomly selected tone from emotions.txt and from a random perpective from descriptive.txt<br>
-5. Bot uses Alltalk_tts to generate speech based on the generated article text, outputs a .wav file
-6. Bot starts generating 4 images based on the headline and the tone stored from step 2, it will start generating using what ever model is loaded into stable-diffusion-webui, outputs .png files<br>
+4. Bot trys to make up "importaant words" based on the headline and description, this is fed into Stable Diffusion for image creation.
+5. Bot generates a news article text based on the headline and short description, asks bot to write in a randomly selected tone from emotions.txt and from a random perpective from descriptive.txt<br>
+6. Bot uses Alltalk_tts to generate speech based on the generated article text, outputs a .wav file
+7. Bot starts generating 4 images based on the "important words" generated, stored from step 4, it will start generating using what ever model is loaded into stable-diffusion-webui, outputs .png files<br>
 - If enabled, bot will overlay a watermark to the images, logo_overlay.png in the root is the watermark file, it can be changed to whatever you want.<br>
-7. Bot combines the images and speech into a .mp4 file<br>
+8. Bot combines the images and speech into a .mp4 file<br>
 - If enabled, bot will combine videos together to form a longer video with multiple articles in it, transClip.mp4 in the root is the video that goes in between your generated videos, you can change this to whatever you want<br>
 - If enabled, bot will post the .mp4 to a Facebook page.<br>
+- If enabled, bot will post a Facebook comment on the uploaded video, pulling data from urls.txt, this data could be anything as long as its on its own line, the bot will randomly select a line to post as a comment.
 - If enabled, bot will add the generated hashtags to the end of the video description on Facebook.<br>
-8. Bot will continue to generate until the python script is stopped.<br>
+9. Bot will continue to generate until the python script is stopped.<br>
 
 Models I'm using:<br>
-LLM - Awanllm-Llama-3-8B-Dolfin-v0.6-Abliterated-DPO.Q5_K_M.gguf<br>
-Stable Diffusion - 512-base-ema.ckpt<br> 
+LLM - Meta-Llama-3.1-8B-Instruct.i1-Q4_K_M.gguf or Qwen2.5-7B-Instruct.Q5_K_M.gguf<br>
+Stable Diffusion - v2-1_512-ema-pruned.safetensors<br> 
 TTS - Piper with various RVC models.<br>
